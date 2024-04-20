@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
+	"strings"
 )
 
 type HTTPRequest struct {
@@ -13,12 +15,12 @@ type HTTPRequest struct {
 	HTTPVersion string
 }
 
-func NewHTTPRequest(method, path, version string) *HTTPRequest {
-	return &HTTPRequest{
-		Method:      method,
-		Path:        path,
-		HTTPVersion: version,
-	}
+type HTTPResponse struct {
+	HTTPVersion string
+	StatusCode  int
+	Status      string
+	Headers     map[string]string
+	Body        string
 }
 
 const (
@@ -44,7 +46,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// _, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 	handle_connection(conn)
 }
 
@@ -60,12 +61,31 @@ func handle_connection(conn net.Conn) {
 	requestParts := bytes.Split(buffer, []byte(CRLF))
 	headerParts := bytes.Split(requestParts[0], []byte(WhiteSpace))
 
-	request := NewHTTPRequest(string(headerParts[0]), string(headerParts[1]), string(headerParts[2]))
-
-	if request.Path == "/" {
-		conn.Write([]byte(OK + CRLF + CRLF))
-	} else {
-		conn.Write([]byte(NOT_FOUND + CRLF + CRLF))
+	request := &HTTPRequest{
+		Method:      string(headerParts[0]),
+		Path:        string(headerParts[1]),
+		HTTPVersion: string(headerParts[2]),
 	}
 
+	switch {
+	case request.Path == "/":
+		conn.Write([]byte(OK + CRLF + CRLF))
+	case strings.HasPrefix(request.Path, "/echo"):
+		handle_echo(conn, request)
+	default:
+		conn.Write([]byte(NOT_FOUND + CRLF + CRLF))
+	}
+}
+
+func handle_echo(conn net.Conn, request *HTTPRequest) {
+	body, found := strings.CutPrefix(request.Path, "/echo/")
+
+	if !found {
+		fmt.Println("Failed to parse request")
+		os.Exit(1)
+	}
+
+	content_type := "Content-Type: text/plain"
+	content_length := "Content-Length: " + strconv.Itoa(len(body))
+	conn.Write([]byte(OK + CRLF + content_type + CRLF + content_length + CRLF + CRLF + body))
 }
