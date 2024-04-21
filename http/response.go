@@ -39,14 +39,14 @@ func (r *Response) serialize_headers() string {
 	}
 
 	for key, value := range r.Headers {
-		headers += key + ": " + value + "\r\n"
+		headers += key + ": " + value + CRLF
 	}
 
-	return headers + CRLF
+	return headers
 }
 
 func (r *Response) Serialize() []byte {
 	start_line := r.HTTPVersion + WhiteSpace + strconv.Itoa(r.StatusCode) + WhiteSpace + r.Status + CRLF
-	headers := r.serialize_headers()
+	headers := r.serialize_headers() + CRLF
 	return []byte(start_line + headers + r.Body)
 }
