@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path"
-	"strconv"
 	"strings"
 
+	"github.com/codecrafters-io/http-server-starter-go/handlers"
 	"github.com/codecrafters-io/http-server-starter-go/http"
 )
 
-var dir string
+var Directory string
 
 func main() {
-	flag.StringVar(&dir, "directory", "", "Directory")
+	flag.StringVar(&Directory, "directory", "", "Directory")
 	flag.Parse()
+	handlers.Directory = Directory
 
 	listener, err := net.Listen("tcp", "0.0.0.0:4221")
 	if err != nil {
@@ -53,83 +53,15 @@ func handle_connection(conn net.Conn) {
 		response := http.Ok()
 		conn.Write(response.Serialize())
 	case strings.HasPrefix(request.Path, "/echo"):
-		handle_echo(conn, request)
+		handlers.HandleEcho(conn, request)
 	case strings.HasPrefix(request.Path, "/user-agent"):
-		handle_user_agent(conn, request)
+		handlers.HandleUserAgent(conn, request)
 	case strings.HasPrefix(request.Path, "/files"):
-		handle_files(conn, request)
+		handlers.HandleFile(conn, request)
 	default:
 		response := http.NotFound()
 		conn.Write(response.Serialize())
 	}
 
 	conn.Close()
-}
-
-func handle_echo(conn net.Conn, request *http.Request) {
-	body, found := strings.CutPrefix(request.Path, "/echo/")
-
-	if !found {
-		fmt.Println("Failed to parse request")
-		os.Exit(1)
-	}
-
-	response := &http.Response{
-		HTTPVersion: "HTTP/1.1",
-		StatusCode:  200,
-		Status:      "OK",
-		Headers: map[string]string{
-			"Content-Type":   "text/plain",
-			"Content-Length": strconv.Itoa(len(body)),
-		},
-		Body: body,
-	}
-
-	conn.Write(response.Serialize())
-}
-
-func handle_user_agent(conn net.Conn, request *http.Request) {
-	response := &http.Response{
-		HTTPVersion: "HTTP/1.1",
-		StatusCode:  200,
-		Status:      "OK",
-		Headers: map[string]string{
-			"Content-Type":   "text/plain",
-			"Content-Length": strconv.Itoa(len(request.Headers["User-Agent"])),
-		},
-		Body: request.Headers["User-Agent"],
-	}
-
-	conn.Write(response.Serialize())
-}
-
-func handle_files(conn net.Conn, request *http.Request) {
-	filename, found := strings.CutPrefix(request.Path, "/files/")
-
-	if !found {
-		fmt.Println("Failed to parse request")
-		os.Exit(1)
-	}
-
-	filepath := path.Join(dir, filename)
-	buffer, error := os.ReadFile(filepath)
-
-	if error != nil {
-		response := http.NotFound()
-		conn.Write(response.Serialize())
-		return
-	}
-
-	response := &http.Response{
-		HTTPVersion: "HTTP/1.1",
-		StatusCode:  200,
-		Status:      "OK",
-		Headers: map[string]string{
-			"Content-Type":   "application/octet-stream",
-			"Content-Length": strconv.Itoa(len(buffer)),
-		},
-		Body: string(buffer),
-	}
-
-	conn.Write(response.Serialize())
 }

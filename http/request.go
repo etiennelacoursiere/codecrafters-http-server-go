@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 )
 
@@ -15,6 +16,7 @@ type Request struct {
 	Path        string
 	HTTPVersion string
 	Headers     map[string]string
+	Body        string
 }
 
 func ParseRequest(data []byte) *Request {
@@ -28,7 +30,8 @@ func ParseRequest(data []byte) *Request {
 
 	headers := make(map[string]string)
 
-	for i := 1; string(lines[i]) != ""; i++ {
+	var i int
+	for i = 1; string(lines[i]) != ""; i++ {
 		line := string(lines[i])
 		parts := strings.Split(line, ": ")
 		headers[parts[0]] = parts[1]
@@ -36,7 +39,14 @@ func ParseRequest(data []byte) *Request {
 
 	request.Headers = headers
 
-	// fmt.Printf("%#v\n", request)
+	if request.Method == "POST" && len(lines) >= i+1 {
+		body := lines[i+1]
+		body = bytes.Trim(body, "\x00")
+
+		request.Body = string(body)
+	}
+
+	fmt.Printf("%#v\n", request)
 
 	return request
 }

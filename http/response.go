@@ -31,6 +31,14 @@ func NotFound() *Response {
 	}
 }
 
+func InternalServerError() *Response {
+	return &Response{
+		HTTPVersion: "HTTP/1.1",
+		StatusCode:  500,
+		Status:      "Internal Server Error",
+	}
+}
+
 func (r *Response) serialize_headers() string {
 	headers := ""
 
