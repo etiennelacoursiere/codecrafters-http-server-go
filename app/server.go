@@ -1,27 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"net"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/codecrafters-io/http-server-starter-go/http"
 )
-
-type HTTPRequest struct {
-	Method      string
-	Path        string
-	HTTPVersion string
-}
-
-type HTTPResponse struct {
-	HTTPVersion string
-	StatusCode  int
-	Status      string
-	Headers     map[string]string
-	Body        string
-}
 
 const (
 	CRLF      = "\r\n"
@@ -58,26 +45,25 @@ func handle_connection(conn net.Conn) {
 		os.Exit(1)
 	}
 
-	requestParts := bytes.Split(buffer, []byte(CRLF))
-	headerParts := bytes.Split(requestParts[0], []byte(WhiteSpace))
+	fmt.Println(string(buffer))
 
-	request := &HTTPRequest{
-		Method:      string(headerParts[0]),
-		Path:        string(headerParts[1]),
-		HTTPVersion: string(headerParts[2]),
-	}
+	request := http.ParseRequest(buffer)
 
 	switch {
 	case request.Path == "/":
-		conn.Write([]byte(OK + CRLF + CRLF))
+		response := http.Ok()
+		conn.Write(response.Serialize())
 	case strings.HasPrefix(request.Path, "/echo"):
 		handle_echo(conn, request)
+	case strings.HasPrefix(request.Path, "/user-agent"):
+		handle_user_agent(conn, request)
 	default:
-		conn.Write([]byte(NOT_FOUND + CRLF + CRLF))
+		response := http.NotFound()
+		conn.Write(response.Serialize())
 	}
 }
 
-func handle_echo(conn net.Conn, request *HTTPRequest) {
+func handle_echo(conn net.Conn, request *http.Request) {
 	body, found := strings.CutPrefix(request.Path, "/echo/")
 
 	if !found {
@@ -85,7 +71,31 @@ func handle_echo(conn net.Conn, request *HTTPRequest) {
 		os.Exit(1)
 	}
 
-	content_type := "Content-Type: text/plain"
-	content_length := "Content-Length: " + strconv.Itoa(len(body))
-	conn.Write([]byte(OK + CRLF + content_type + CRLF + content_length + CRLF + CRLF + body))
+	response := &http.Response{
+		HTTPVersion: "HTTP/1.1",
+		StatusCode:  200,
+		Status:      "OK",
+		Headers: map[string]string{
+			"Content-Type":   "text/plain",
+			"Content-Length": strconv.Itoa(len(body)),
+		},
+		Body: body,
+	}
+
+	conn.Write(response.Serialize())
+}
+
+func handle_user_agent(conn net.Conn, request *http.Request) {
+	response := &http.Response{
+		HTTPVersion: "HTTP/1.1",
+		StatusCode:  200,
+		Status:      "OK",
+		Headers: map[string]string{
+			"Content-Type":   "text/plain",
+			"Content-Length": strconv.Itoa(len(request.Headers["User-Agent"])),
+		},
+		Body: request.Headers["User-Agent"],
+	}
+
+	conn.Write(response.Serialize())
 }
