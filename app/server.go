@@ -45,7 +45,7 @@ func handle_connection(conn net.Conn) {
 		os.Exit(1)
 	}
 
-	fmt.Println(string(buffer))
+	// fmt.Println(string(buffer))
 
 	request := http.ParseRequest(buffer)
 

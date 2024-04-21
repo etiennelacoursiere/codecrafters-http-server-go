@@ -2,7 +2,6 @@ package http
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 )
 
@@ -37,7 +36,7 @@ func ParseRequest(data []byte) *Request {
 
 	request.Headers = headers
 
-	fmt.Printf("%#v\n", request)
+	// fmt.Printf("%#v\n", request)
 
 	return request
 }
